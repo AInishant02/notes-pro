@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Notes Pro — Smart Study Notes{% endblock %}
+{% block content %}
+<div class="landing">
+  <div class="landing-hero">
+    <div class="hero-badge">✦ Your intelligent study companion</div>
+    <h1 class="hero-title">Notes, organised.<br><span class="accent">Brilliantly.</span></h1>
+    <p class="hero-sub">Create, tag, search and AI-summarise your study notes. Built for students who mean business.</p>
+    <div class="hero-actions">
+      <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">Get started free</a>
+      <a href="{{ url_for('login') }}" class="btn btn-ghost btn-lg">Log in</a>
+    </div>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🗂️</div>
+      <h3>Subject Organisation</h3>
+      <p>Colour-coded subjects and tags so every note has its place.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <h3>AI Summariser</h3>
+      <p>Paste your notes — get summaries, flashcards and quizzes instantly.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔍</div>
+      <h3>Full-Text Search</h3>
+      <p>Find anything across all your notes in milliseconds.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📎</div>
+      <h3>File Attachments</h3>
+      <p>Attach PDFs and images directly to any note.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔗</div>
+      <h3>Public Share Links</h3>
+      <p>Share notes with classmates via a single link.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">✍️</div>
+      <h3>Markdown Support</h3>
+      <p>Write formatted notes with headings, lists and code blocks.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

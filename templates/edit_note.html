@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Edit Note — Notes Pro{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Edit Note</h1>
+    <p class="page-sub">{{ note.title }}</p>
+  </div>
+  <a href="{{ url_for('view_note', note_id=note.id) }}" class="btn btn-ghost">← Back</a>
+</div>
+
+<div class="editor-layout">
+  <form method="POST" enctype="multipart/form-data" class="note-form">
+    <div class="form-row">
+      <div class="form-group flex-1">
+        <label>Title *</label>
+        <input type="text" name="title" required value="{{ note.title }}" class="input-lg" />
+      </div>
+      <div class="form-group form-group-sm">
+        <label>Subject</label>
+        <select name="subject_id">
+          <option value="">— None —</option>
+          {% for sub in subjects %}
+          <option value="{{ sub.id }}" {% if note.subject_id == sub.id %}selected{% endif %}>{{ sub.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Tags <small>(comma-separated)</small></label>
+      <input type="text" name="tags" value="{{ note.tags | map(attribute='name') | join(', ') }}" placeholder="python, chapter-3" />
+    </div>
+
+    <div class="form-group">
+      <label>Content <small>(Markdown supported)</small></label>
+      <div class="editor-toolbar">
+        <button type="button" onclick="insertMd('**','**')"><b>B</b></button>
+        <button type="button" onclick="insertMd('*','*')"><i>I</i></button>
+        <button type="button" onclick="insertMd('# ','')">H1</button>
+        <button type="button" onclick="insertMd('## ','')">H2</button>
+        <button type="button" onclick="insertMd('- ','')">• List</button>
+        <button type="button" onclick="insertMd('```\n','\n```')">Code</button>
+        <button type="button" onclick="togglePreview()" id="previewBtn">👁 Preview</button>
+      </div>
+      <textarea name="content" id="noteContent" rows="16">{{ note.content }}</textarea>
+      <div id="previewPane" class="markdown-preview hidden"></div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group flex-1">
+        <label>Replace Attachment <small>(optional)</small></label>
+        {% if note.file_path %}
+        <p class="current-file">Current: <a href="{{ url_for('uploaded_file', filename=note.file_path) }}" target="_blank">{{ note.file_path }}</a></p>
+        {% endif %}
+        <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" />
+      </div>
+      <div class="form-group form-check-group">
+        <label class="toggle-label">
+          <input type="checkbox" name="is_public" id="isPublic" {% if note.is_public %}checked{% endif %} />
+          <span class="toggle-track"></span>
+          Make note public
+        </label>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Update Note</button>
+      <a href="{{ url_for('view_note', note_id=note.id) }}" class="btn btn-ghost">Cancel</a>
+      <form method="POST" action="{{ url_for('delete_note', note_id=note.id) }}" style="margin-left:auto">
+        <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this note?')">Delete</button>
+      </form>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script>
+function insertMd(before, after) {
+  const ta = document.getElementById('noteContent');
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  ta.value = ta.value.substring(0, start) + before + ta.value.substring(start, end) + after + ta.value.substring(end);
+  ta.focus();
+}
+function togglePreview() {
+  const ta = document.getElementById('noteContent');
+  const pane = document.getElementById('previewPane');
+  const btn = document.getElementById('previewBtn');
+  if (pane.classList.toggle('hidden')) {
+    btn.textContent = '👁 Preview'; ta.classList.remove('hidden');
+  } else {
+    pane.innerHTML = marked.parse(ta.value || '*Nothing to preview yet.*');
+    btn.textContent = '✏️ Edit'; ta.classList.add('hidden');
+  }
+}
+</script>
+{% endblock %}

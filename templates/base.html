@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Notes Pro{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+{% if current_user.is_authenticated %}
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <a href="{{ url_for('dashboard') }}" class="sidebar-brand" style="text-decoration:none">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Notes Pro" style="width:34px;height:34px;border-radius:8px;object-fit:cover;flex-shrink:0;">
+    <div class="brand-block">
+      <div class="brand-title"><span class="brand-notes">Notes</span><span class="brand-pro">Pro</span></div>
+      <div class="brand-tagline">ORGANIZE &bull; LEARN &bull; ACHIEVE</div>
+    </div>
+  </a>
+
+  <nav class="sidebar-nav">
+    <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint=='dashboard' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+      Dashboard
+    </a>
+    <a href="{{ url_for('create_note') }}" class="nav-link {% if request.endpoint=='create_note' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Note
+    </a>
+    <a href="{{ url_for('subjects') }}" class="nav-link {% if request.endpoint=='subjects' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+      Subjects
+    </a>
+    <a href="{{ url_for('search') }}" class="nav-link {% if request.endpoint=='search' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Search
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <div class="user-avatar">{{ current_user.username[0].upper() }}</div>
+      <span>{{ current_user.username }}</span>
+    </div>
+    <a href="{{ url_for('logout') }}" class="logout-btn" title="Logout">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </a>
+  </div>
+</aside>
+
+<!-- Mobile top bar -->
+<header class="mobile-header">
+  <button class="burger" id="burgerBtn" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+  <a href="{{ url_for('dashboard') }}" class="brand-text" style="text-decoration:none;display:flex;align-items:center;gap:8px;">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Notes Pro" style="width:26px;height:26px;border-radius:5px;object-fit:cover;">
+    <span><span class="brand-notes">Notes</span><span class="brand-pro">Pro</span></span>
+  </a>
+  <a href="{{ url_for('create_note') }}" class="btn-icon-sm">+</a>
+</header>
+
+<div class="overlay" id="overlay"></div>
+
+<main class="main-content">
+{% endif %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-container">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+{% block content %}{% endblock %}
+
+{% if current_user.is_authenticated %}
+</main>
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

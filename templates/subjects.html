@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Subjects — Notes Pro{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Subjects</h1>
+    <p class="page-sub">Organise notes into subjects</p>
+  </div>
+</div>
+
+<div class="subjects-layout">
+  <!-- Create form -->
+  <div class="card card-form">
+    <h3>Add Subject</h3>
+    <form method="POST">
+      <div class="form-group">
+        <label>Subject Name</label>
+        <input type="text" name="name" required placeholder="e.g. Mathematics" />
+      </div>
+      <div class="form-group">
+        <label>Colour</label>
+        <input type="color" name="color" value="#6366f1" />
+      </div>
+      <button type="submit" class="btn btn-primary">Add Subject</button>
+    </form>
+  </div>
+
+  <!-- Subject list -->
+  <div class="subjects-list">
+    {% for sub in subjects %}
+    <div class="subject-item">
+      <div class="subject-color-dot" style="background:{{ sub.color }}"></div>
+      <div class="subject-info">
+        <strong>{{ sub.name }}</strong>
+        <span>{{ sub.notes.count() }} notes</span>
+      </div>
+      <form method="POST" action="{{ url_for('delete_subject', sub_id=sub.id) }}" style="margin-left:auto">
+        <button type="submit" class="btn btn-ghost btn-sm btn-danger-ghost" onclick="return confirm('Delete subject? Notes will be unassigned.')">Delete</button>
+      </form>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">🗂️</div>
+      <h3>No subjects yet</h3>
+      <p>Add your first subject using the form.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

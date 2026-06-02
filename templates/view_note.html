@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}{{ note.title }} — Notes Pro{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    {% if note.subject %}
+    <div class="note-subject-badge" style="background:{{ note.subject.color }}22; color:{{ note.subject.color }}; display:inline-flex; margin-bottom:8px">
+      {{ note.subject.name }}
+    </div>
+    {% endif %}
+    <h1>{{ note.title }}</h1>
+    <p class="page-sub">
+      Updated {{ note.updated_at.strftime('%B %d, %Y at %H:%M') }}
+      {% if note.is_public %}<span class="badge-public">🔗 Public</span>{% endif %}
+    </p>
+  </div>
+  {% if not shared %}
+  <div class="action-group">
+    <a href="{{ url_for('edit_note', note_id=note.id) }}" class="btn btn-ghost">Edit</a>
+    <form method="POST" action="{{ url_for('delete_note', note_id=note.id) }}" style="display:inline">
+      <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this note?')">Delete</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+
+{% if note.tags %}
+<div class="tag-list" style="margin-bottom:1.5rem">
+  {% for tag in note.tags %}<span class="tag">{{ tag.name }}</span>{% endfor %}
+</div>
+{% endif %}
+
+<div class="view-layout">
+  <!-- Note Content -->
+  <div class="note-body">
+    <div class="markdown-render" id="noteRender">{{ note.content }}</div>
+
+    {% if note.file_path %}
+    <div class="attachment-box">
+      <h4>📎 Attachment</h4>
+      {% if note.is_image %}
+      <img src="{{ url_for('uploaded_file', filename=note.file_path) }}" alt="Attachment" class="attachment-img" />
+      {% elif note.is_pdf %}
+      <a href="{{ url_for('uploaded_file', filename=note.file_path) }}" target="_blank" class="btn btn-ghost">📄 Open PDF</a>
+      {% else %}
+      <a href="{{ url_for('uploaded_file', filename=note.file_path) }}" target="_blank" class="btn btn-ghost">⬇ Download</a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if note.is_public and note.share_token and not shared %}
+    <div class="share-box">
+      <h4>🔗 Share Link</h4>
+      <div class="share-url-row">
+        <input type="text" readonly id="shareUrl" value="{{ request.host_url }}share/{{ note.share_token }}" />
+        <button class="btn btn-ghost btn-sm" onclick="copyShare()">Copy</button>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- AI Panel -->
+  {% if not shared %}
+  <aside class="ai-panel">
+    <h3>🤖 AI Assistant</h3>
+    <p class="ai-sub">Summarise, quiz yourself, or create flashcards from this note.</p>
+    <a href="{{ url_for('ai_assistant', note_id=note.id) }}" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.5rem">
+      Open AI Assistant →
+    </a>
+  </aside>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+// Render markdown
+const el = document.getElementById('noteRender');
+if (el) { el.innerHTML = marked.parse(el.textContent); hljs.highlightAll(); }
+
+// Share copy
+function copyShare() {
+  const inp = document.getElementById('shareUrl');
+  inp.select(); document.execCommand('copy');
+  alert('Link copied!');
+}
+
+// AI
+async function aiAction(action) {
+  const labels = { summarize:'Summary', quiz:'Quiz Questions', flashcards:'Flashcards' };
+  const loading = document.getElementById('aiLoading');
+  const result  = document.getElementById('aiResult');
+  const body    = document.getElementById('aiResultBody');
+  const label   = document.getElementById('aiResultLabel');
+  result.classList.add('hidden');
+  loading.classList.remove('hidden');
+  try {
+    const content = document.getElementById('noteRender').textContent;
+    const res = await fetch('/api/ai/summarize', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ content, action })
+    });
+    const data = await res.json();
+    loading.classList.add('hidden');
+    if (data.error) { body.textContent = '⚠️ ' + data.error; }
+    else { body.innerHTML = marked.parse(data.result); }
+    label.textContent = labels[action];
+    result.classList.remove('hidden');
+  } catch(e) {
+    loading.classList.add('hidden');
+    body.textContent = '⚠️ Request failed.';
+    result.classList.remove('hidden');
+  }
+}
+</script>
+{% endblock %}

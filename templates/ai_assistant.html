@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+{% block title %}AI Assistant — {{ note.title }}{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('view_note', note_id=note.id) }}" class="back-link">← Back to note</a>
+    <h1>🤖 AI Assistant</h1>
+    <p class="page-sub">{{ note.title }} &mdash; Powered by Groq (LLaMA 3)</p>
+  </div>
+</div>
+
+<!-- Mode Selector -->
+<div class="ai-mode-tabs">
+  <button class="ai-tab active" onclick="switchTab('summarize', this)">📋 Summarise</button>
+  <button class="ai-tab" onclick="switchTab('quiz', this)">❓ Quiz Me</button>
+  <button class="ai-tab" onclick="switchTab('flashcards', this)">🃏 Flashcards</button>
+</div>
+
+<div class="ai-page-body">
+
+  <!-- ── Summarise ── -->
+  <div id="tab-summarize" class="ai-section">
+    <div class="ai-generate-card">
+      <p class="ai-hint">Get a concise bullet-point summary of your note.</p>
+      <button class="btn btn-primary" onclick="generateSummary()">Generate Summary</button>
+    </div>
+    <div id="summary-loading" class="ai-spinner hidden">
+      <div class="spinner"></div><span>Thinking…</span>
+    </div>
+    <div id="summary-result" class="ai-result-card hidden">
+      <div class="ai-result-card-header">
+        <span>📋 Summary</span>
+        <button onclick="document.getElementById('summary-result').classList.add('hidden')" class="close-btn">✕</button>
+      </div>
+      <div id="summary-body" class="ai-result-body"></div>
+    </div>
+  </div>
+
+  <!-- ── Quiz ── -->
+  <div id="tab-quiz" class="ai-section hidden">
+    <div class="ai-generate-card" id="quiz-generate">
+      <p class="ai-hint">Test your knowledge with 5 multiple-choice questions generated from your note.</p>
+      <button class="btn btn-primary" onclick="generateQuiz()">Generate Quiz</button>
+    </div>
+    <div id="quiz-loading" class="ai-spinner hidden">
+      <div class="spinner"></div><span>Generating questions…</span>
+    </div>
+    <div id="quiz-container" class="hidden">
+      <div class="quiz-progress-bar-wrap">
+        <div class="quiz-progress-bar" id="quizProgressBar"></div>
+      </div>
+      <p class="quiz-progress-text" id="quizProgressText"></p>
+      <div id="quiz-question-card" class="quiz-card"></div>
+      <div id="quiz-score-card" class="quiz-score-card hidden">
+        <div class="score-icon">🎉</div>
+        <h2 id="score-title"></h2>
+        <p id="score-sub"></p>
+        <button class="btn btn-primary" onclick="restartQuiz()">Try Again</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Flashcards ── -->
+  <div id="tab-flashcards" class="ai-section hidden">
+    <div class="ai-generate-card" id="fc-generate">
+      <p class="ai-hint">Review 8 key Q&A flashcards from your note.</p>
+      <button class="btn btn-primary" onclick="generateFlashcards()">Generate Flashcards</button>
+    </div>
+    <div id="fc-loading" class="ai-spinner hidden">
+      <div class="spinner"></div><span>Creating flashcards…</span>
+    </div>
+    <div id="fc-container" class="hidden">
+      <p class="quiz-progress-text" id="fcProgressText"></p>
+      <div class="flashcard-wrap">
+        <div class="flashcard" id="flashcard" onclick="flipCard()">
+          <div class="flashcard-inner" id="flashcardInner">
+            <div class="flashcard-front" id="fcFront"></div>
+            <div class="flashcard-back" id="fcBack"></div>
+          </div>
+          <div class="flashcard-hint">Click to flip</div>
+        </div>
+      </div>
+      <div class="fc-nav">
+        <button class="btn btn-ghost" onclick="fcNav(-1)">← Prev</button>
+        <button class="btn btn-ghost" onclick="fcNav(1)">Next →</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>const NOTE_CONTENT = {{ note.content | tojson }};</script>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script>
+// ── Tab switching ──────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.ai-section').forEach(s => s.classList.add('hidden'));
+  document.querySelectorAll('.ai-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.remove('hidden');
+  btn.classList.add('active');
+}
+
+// ── Fetch helper ──────────────────────────────────────────
+async function callAI(action) {
+  const res = await fetch('/api/ai/summarize', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ content: NOTE_CONTENT, action })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data.result;
+}
+
+// ── Summarise ─────────────────────────────────────────────
+async function generateSummary() {
+  document.getElementById('summary-result').classList.add('hidden');
+  document.getElementById('summary-loading').classList.remove('hidden');
+  try {
+    const text = await callAI('summarize');
+    document.getElementById('summary-body').innerHTML = marked.parse(text);
+    document.getElementById('summary-result').classList.remove('hidden');
+  } catch(e) {
+    document.getElementById('summary-body').textContent = '⚠️ ' + e.message;
+    document.getElementById('summary-result').classList.remove('hidden');
+  }
+  document.getElementById('summary-loading').classList.add('hidden');
+}
+
+// ── Quiz ──────────────────────────────────────────────────
+let quizQuestions = [], quizIndex = 0, quizScore = 0;
+
+async function generateQuiz() {
+  document.getElementById('quiz-generate').classList.add('hidden');
+  document.getElementById('quiz-loading').classList.remove('hidden');
+  try {
+    const text = await callAI('quiz');
+    quizQuestions = parseQuiz(text);
+    if (!quizQuestions.length) throw new Error('Could not parse questions. Try again.');
+    quizIndex = 0; quizScore = 0;
+    document.getElementById('quiz-loading').classList.add('hidden');
+    document.getElementById('quiz-container').classList.remove('hidden');
+    renderQuestion();
+  } catch(e) {
+    document.getElementById('quiz-loading').classList.add('hidden');
+    document.getElementById('quiz-generate').classList.remove('hidden');
+    alert('⚠️ ' + e.message);
+  }
+}
+
+function parseQuiz(text) {
+  const questions = [];
+  // Split by numbered question pattern
+  const blocks = text.split(/\n(?=\d+[\.\)])/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) continue;
+    const qLine = lines[0].replace(/^\d+[\.\)]\s*/, '').trim();
+    const options = [];
+    let correct = -1;
+    let explanation = '';
+    for (let i = 1; i < lines.length; i++) {
+      const m = lines[i].match(/^([A-Da-d])[\.\)]\s*(.+)/);
+      if (m) options.push(m[2].trim());
+      const ans = lines[i].match(/answer[:\s]+([A-Da-d])/i);
+      if (ans) correct = 'abcd'.indexOf(ans[1].toLowerCase());
+      if (lines[i].toLowerCase().startsWith('explanation')) {
+        explanation = lines[i].replace(/^explanation[:\s]*/i, '').trim();
+      }
+    }
+    if (qLine && options.length >= 2) {
+      questions.push({ q: qLine, options, correct: correct === -1 ? 0 : correct, explanation });
+    }
+  }
+  return questions;
+}
+
+function renderQuestion() {
+  const total = quizQuestions.length;
+  const pct = (quizIndex / total) * 100;
+  document.getElementById('quizProgressBar').style.width = pct + '%';
+  document.getElementById('quizProgressText').textContent = `Question ${quizIndex + 1} of ${total}`;
+
+  const q = quizQuestions[quizIndex];
+  const card = document.getElementById('quiz-question-card');
+  card.innerHTML = `
+    <div class="quiz-q-text">${q.q}</div>
+    <div class="quiz-options">
+      ${q.options.map((opt, i) => `
+        <button class="quiz-option" onclick="selectOption(this, ${i})">
+          <span class="opt-letter">${'ABCD'[i]}</span>
+          <span>${opt}</span>
+        </button>`).join('')}
+    </div>
+    <div class="quiz-feedback hidden" id="quiz-feedback"></div>
+    <div class="quiz-next hidden" id="quiz-next">
+      <button class="btn btn-primary" onclick="nextQuestion()">${quizIndex + 1 < total ? 'Next Question →' : 'See Results'}</button>
+    </div>`;
+  card.classList.remove('hidden');
+  document.getElementById('quiz-score-card').classList.add('hidden');
+}
+
+function selectOption(btn, idx) {
+  if (btn.classList.contains('selected') || btn.classList.contains('correct') || btn.classList.contains('wrong')) return;
+  const q = quizQuestions[quizIndex];
+  document.querySelectorAll('.quiz-option').forEach(b => b.disabled = true);
+  const feedback = document.getElementById('quiz-feedback');
+  if (idx === q.correct) {
+    btn.classList.add('correct');
+    quizScore++;
+    feedback.innerHTML = `✅ Correct! ${q.explanation ? '<br><span class="exp-text">' + q.explanation + '</span>' : ''}`;
+    feedback.className = 'quiz-feedback feedback-correct';
+  } else {
+    btn.classList.add('wrong');
+    document.querySelectorAll('.quiz-option')[q.correct].classList.add('correct');
+    feedback.innerHTML = `❌ Wrong. Correct answer: <strong>${'ABCD'[q.correct]}. ${q.options[q.correct]}</strong>${q.explanation ? '<br><span class="exp-text">' + q.explanation + '</span>' : ''}`;
+    feedback.className = 'quiz-feedback feedback-wrong';
+  }
+  feedback.classList.remove('hidden');
+  document.getElementById('quiz-next').classList.remove('hidden');
+}
+
+function nextQuestion() {
+  quizIndex++;
+  if (quizIndex >= quizQuestions.length) showScore();
+  else renderQuestion();
+}
+
+function showScore() {
+  document.getElementById('quiz-question-card').classList.add('hidden');
+  const total = quizQuestions.length;
+  const pct = Math.round((quizScore / total) * 100);
+  document.getElementById('quizProgressBar').style.width = '100%';
+  document.getElementById('quizProgressText').textContent = `Completed!`;
+  const sc = document.getElementById('quiz-score-card');
+  document.getElementById('score-title').textContent = `You scored ${quizScore} / ${total}`;
+  document.getElementById('score-sub').textContent = pct >= 80 ? '🌟 Excellent work!' : pct >= 50 ? '👍 Good effort, keep practising!' : '📚 Review your notes and try again.';
+  sc.classList.remove('hidden');
+}
+
+function restartQuiz() {
+  quizIndex = 0; quizScore = 0;
+  document.getElementById('quiz-score-card').classList.add('hidden');
+  document.getElementById('quiz-container').classList.add('hidden');
+  document.getElementById('quiz-generate').classList.remove('hidden');
+}
+
+// ── Flashcards ────────────────────────────────────────────
+let fcCards = [], fcIndex = 0, fcFlipped = false;
+
+async function generateFlashcards() {
+  document.getElementById('fc-generate').classList.add('hidden');
+  document.getElementById('fc-loading').classList.remove('hidden');
+  try {
+    const text = await callAI('flashcards');
+    fcCards = parseFlashcards(text);
+    if (!fcCards.length) throw new Error('Could not parse flashcards. Try again.');
+    fcIndex = 0;
+    document.getElementById('fc-loading').classList.add('hidden');
+    document.getElementById('fc-container').classList.remove('hidden');
+    renderCard();
+  } catch(e) {
+    document.getElementById('fc-loading').classList.add('hidden');
+    document.getElementById('fc-generate').classList.remove('hidden');
+    alert('⚠️ ' + e.message);
+  }
+}
+
+function parseFlashcards(text) {
+  const cards = [];
+  const lines = text.split('\n');
+  let q = '', a = '';
+  for (const line of lines) {
+    const qm = line.match(/^Q[:\s]+(.+)/i);
+    const am = line.match(/^A[:\s]+(.+)/i);
+    if (qm) q = qm[1].trim();
+    if (am) { a = am[1].trim(); if (q) { cards.push({q, a}); q = ''; a = ''; } }
+  }
+  return cards;
+}
+
+function renderCard() {
+  fcFlipped = false;
+  document.getElementById('flashcardInner').classList.remove('flipped');
+  document.getElementById('fcFront').textContent = fcCards[fcIndex].q;
+  document.getElementById('fcBack').textContent = fcCards[fcIndex].a;
+  document.getElementById('fcProgressText').textContent = `Card ${fcIndex + 1} of ${fcCards.length}`;
+}
+
+function flipCard() {
+  fcFlipped = !fcFlipped;
+  document.getElementById('flashcardInner').classList.toggle('flipped', fcFlipped);
+}
+
+function fcNav(dir) {
+  fcIndex = (fcIndex + dir + fcCards.length) % fcCards.length;
+  renderCard();
+}
+</script>
+{% endblock %}

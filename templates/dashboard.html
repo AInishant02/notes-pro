@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Notes Pro{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="page-sub">Good to see you, {{ current_user.username }} 👋</p>
+  </div>
+  <a href="{{ url_for('create_note') }}" class="btn btn-primary">+ New Note</a>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-num">{{ total }}</div>
+    <div class="stat-label">Total Notes</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num">{{ sub_count }}</div>
+    <div class="stat-label">Subjects</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num">{{ notes | selectattr('file_path') | list | length }}</div>
+    <div class="stat-label">Attachments</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num">{{ notes | selectattr('is_public') | list | length }}</div>
+    <div class="stat-label">Shared Notes</div>
+  </div>
+</div>
+
+<!-- Recent Notes -->
+<div class="section-header">
+  <h2>Recent Notes</h2>
+  <a href="{{ url_for('search') }}" class="btn btn-ghost btn-sm">View all</a>
+</div>
+
+{% if recent %}
+<div class="notes-grid">
+  {% for note in recent %}
+  <div class="note-card" onclick="location.href='{{ url_for('view_note', note_id=note.id) }}'">
+    {% if note.subject %}
+    <div class="note-subject-badge" style="background:{{ note.subject.color }}22; color:{{ note.subject.color }}">
+      {{ note.subject.name }}
+    </div>
+    {% endif %}
+    <h3 class="note-title">{{ note.title }}</h3>
+    <p class="note-preview">{{ note.content | striptags | truncate(120) }}</p>
+    <div class="note-meta">
+      <span>{{ note.updated_at.strftime('%b %d, %Y') }}</span>
+      {% if note.tags %}
+        <div class="tag-list">
+          {% for tag in note.tags[:3] %}
+          <span class="tag">{{ tag.name }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+    {% if note.file_path %}
+    <div class="note-attachment-indicator">
+      {% if note.is_pdf %}📄{% else %}🖼️{% endif %} Attachment
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">📝</div>
+  <h3>No notes yet</h3>
+  <p>Create your first note to get started!</p>
+  <a href="{{ url_for('create_note') }}" class="btn btn-primary">Create Note</a>
+</div>
+{% endif %}
+{% endblock %}

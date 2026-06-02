@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Register — Notes Pro{% endblock %}
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Notes Pro" style="width:64px;height:64px;border-radius:14px;object-fit:cover;margin:0 auto;display:block;">
+    <div class="auth-brand">
+      <div class="auth-brand-title"><span class="brand-notes">Notes</span><span class="brand-pro">Pro</span></div>
+      <div class="auth-brand-tagline">ORGANIZE &bull; LEARN &bull; ACHIEVE</div>
+    </div>
+    <h2>Create account</h2>
+    <p class="auth-sub">Start organising your study notes today</p>
+
+    <form method="POST">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" name="username" required placeholder="coolstudent" />
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" name="email" required placeholder="you@example.com" />
+      </div>
+      <div class="form-group">
+        <label>Password <small>(min 6 chars)</small></label>
+        <input type="password" name="password" required placeholder="••••••••" />
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Create account</button>
+    </form>
+
+    <p class="auth-footer">Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+  </div>
+</div>
+{% endblock %}
