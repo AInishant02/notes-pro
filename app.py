@@ -310,7 +310,8 @@ Notes:\n""" + content,
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+with app.app_context():
+    db.create_all()
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
